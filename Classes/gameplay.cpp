@@ -4,7 +4,8 @@
 #include "canshu.h"
 #include "gameover.h"
 #include "SimpleAudioEngine.h"
-#include "Userdata.h"            //NEW!!
+#include "Userdata.h"           
+
 
 using namespace CocosDenshion;
 using namespace std;
@@ -19,10 +20,21 @@ gameplay::gameplay()                           //初始化数组
 			Square[i][j] = NULL;
 		}
 	}
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = COLUME + 5; j < COLUME + 9; j++)
+		{
+			square[i][j - COLUME - 5] = Sprite::create("gamesquare.png");
+			square[i][j - COLUME - 5]->setPosition(Director::getInstance()->convertToGL(Vec2(j * 30 + j * 2 + 20, i * 30 + i * 2 + 20)));      //将opengl坐标转换为ul坐标
+			square[i][j - COLUME - 5]->setTag(0);                               //将白块标记为0
+			square[i][j - COLUME - 5]->setColor(Color3B(255, 255, 255));
+			this->addChild(square[i][j - COLUME - 5]);
+		}
+	}
 	gameScore = NULL;
 	CurScore = 0;
+	nextsquare = rand() % 19 + 1;
 	newSquareType();
-
 }
 
 gameplay::~gameplay()
@@ -49,10 +61,11 @@ bool gameplay::init()
 	{
 		return false;
 	}
-	Size VisibleSize = Director::getInstance()->getVisibleSize();
 
+	auto visibleSize = Director::getInstance()->getVisibleSize();
+	Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-
+	//初始化分数显示
 	char score[20] = { 0 };
 	CurScore = 0;
 	sprintf(score, "SCORE:%d", CurScore);
@@ -61,36 +74,85 @@ bool gameplay::init()
 	gameScore->setAnchorPoint(Vec2(0, 0));
 	gameScore->setPosition(Vec2(500, 400));
 	this->addChild(gameScore, 1);
-
+	//产生俄罗斯方块游戏区域（白色方块）
 	for (int i = 0; i < LINE; i++)
 	{
 		for (int j = 0; j < COLUME; j++)
 		{
-			Square[i][j] = Sprite::create("square.png");
-			Square[i][j]->setPosition(Director::getInstance()->convertToGL(Vec2(j * 30 + j * 2 + 20, i * 30 + i * 2 + 20)));      //将opengl坐标转换为ul坐标
-			Square[i][j]->setTag(0);
+			Square[i][j] = Sprite::create("gamesquare.png");
+			Square[i][j]->setPosition(Director::getInstance()->convertToGL(Vec2(j * 30 + j * 2 + 20, i * 30 + i * 2 + 34)));      //将opengl坐标转换为ul坐标
+			Square[i][j]->setTag(0);                               //将白块标记为0
 			Square[i][j]->setColor(Color3B(255, 255, 255));	
 			this->addChild(Square[i][j]);
 		}
 	}
 	this->schedule(schedule_selector(gameplay::updateDown), speed);
 
+	auto background = Sprite::create("gameplaybg.jpg");
+	background->setPosition(Vec2(visibleSize.width / 2 + origin.x+200, visibleSize.height / 2 + origin.y));
+	this->addChild(background, -1);
 
-	auto label = Label::create("return", "fonts/airstrikeacad.ttf", 30);
-	auto menuitem = MenuItemLabel::create(label, CC_CALLBACK_1(gameplay::menuItemCallback, this));
-	auto menu = Menu::create(menuitem, NULL);
-	this->addChild(menu);                                                                           
+	auto frame = Sprite::create("frame.png");             //为游戏界面添加边框
+	frame->setPosition(Vec2(196, 354));
+	this->addChild(frame);
+
+	auto frame2 = Sprite::create("frame2.png");             //为预测方块界面添加边框
+	frame2->setPosition(Vec2(612, 630));
+	this->addChild(frame2);
+	
+	MenuItemImage* item = MenuItemImage::create("return.png", "return2.png", CC_CALLBACK_1(gameplay::menuItemCallback, this));
+	Menu* mn = Menu::create(item, NULL);
+	mn->alignItemsVertically();
+	mn->setPosition(Vec2(940, 650));
+	this->addChild(mn);
+
+	auto turnOn = MenuItemImage::create("button_voi_on.png","button_voi_on.png");
+	auto turnOff = MenuItemImage::create("button_voi_off.png","button_voi_off.png");
+	auto toggleItem = MenuItemToggle::createWithCallback(CC_CALLBACK_1(gameplay::menuMusicCallback, this), turnOn, turnOff, NULL);
+	toggleItem->setPosition(Vec2(940, 150));
+	auto menu = Menu::create(toggleItem, NULL);
+	menu->setPosition(Point::ZERO);
+	this->addChild(menu);
+
+	auto label1 = Label::create("Next:", "fonts/airstrikeacad.ttf", 20);
+	label1->setPosition(Vec2(470, 600));
+	this->addChild(label1);
 
 	auto keyboardListener = EventListenerKeyboard::create();
 	keyboardListener->onKeyPressed = CC_CALLBACK_2(gameplay::keyPressed, this);
 	keyboardListener->onKeyReleased = CC_CALLBACK_2(gameplay::keyReleased, this);
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(keyboardListener, this);
 
+	this->schedule(schedule_selector(gameplay::update), 0.1);
+
 	return true;
 }
 
-void gameplay::keyPressed(EventKeyboard::KeyCode keyCode, Event *event)
+
+bool gameplay::isKeyPressed(EventKeyboard::KeyCode keyCode)
 {
+	if (keys[keyCode])
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void gameplay::update(float delta)                                //处理键盘按住事件
+{
+	Node::update(delta);
+	auto downArrow = EventKeyboard::KeyCode::KEY_DOWN_ARROW;
+	if (isKeyPressed(downArrow)) {
+		updateDown(0.0);
+	}
+}
+
+void gameplay::keyPressed(EventKeyboard::KeyCode keyCode, Event *event)           //键盘处理函数
+{
+	keys[keyCode] = true;
 	if (keyCode == EventKeyboard::KeyCode::KEY_DOWN_ARROW)
 	{
 		updateDown(0.0);
@@ -105,7 +167,7 @@ void gameplay::keyPressed(EventKeyboard::KeyCode keyCode, Event *event)
 	}
 	if (keyCode == EventKeyboard::KeyCode::KEY_UP_ARROW)
 	{
-		nextSquareType();
+		changeSquareType();
 	}
 	if (keyCode == EventKeyboard::KeyCode::KEY_LEFT_ARROW)
 	{
@@ -115,15 +177,20 @@ void gameplay::keyPressed(EventKeyboard::KeyCode keyCode, Event *event)
 	{
 		updateRight();
 	}
+	if (keyCode == EventKeyboard::KeyCode::KEY_SPACE)
+	{
+		down();
+	}
 }
 void gameplay::keyReleased(EventKeyboard::KeyCode keyCode,Event *event)
 {
-	//log("Key with keycode %d released", keyCode);
+	keys[keyCode] = false;
 }
 
 
 void gameplay::enterHelloWorldScene(Ref* pSender)
 {
+	Director::getInstance()->resume();
 	Director::getInstance()->replaceScene(HelloWorld::createScene());
 }
 
@@ -135,11 +202,12 @@ void gameplay::updateScore()
 	gameScore->setString(score);
 }
 
-void gameplay::gameover()                         //NEW!!
+void gameplay::gameover()
 {
 	Director::getInstance()->replaceScene(gameover::createScene());
 
-	UserDefault::getInstance()->setIntegerForKey(NEW_SCORE, CurScore);
+
+	UserDefault::getInstance()->setIntegerForKey(NEW_SCORE, CurScore);                    //排名
 	std::vector<int> scoreList;
 	scoreList.push_back(CurScore);
 
@@ -159,21 +227,856 @@ void gameplay::gameover()                         //NEW!!
 	}
 }
 
+void gameplay::down()
+{
+	int min,sum;
+	switch (CurSquareType)
+	{
+	case 1:
+		if (Curline < 1)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 4; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		for (int j = Curcolume; j < Curcolume + 4; j++)
+		{
+ 			Square[Curline - 1][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 1][j]->setTag(0);
+		}
+		for (int j = Curcolume; j < Curcolume + 4; j++)
+		{
+			Square[Curline - 1 + min][j]->setColor(Color3B(52, 228, 249));
+			Square[Curline - 1 + min][j]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 2:
+		if (Curline < 4)
+			break;
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		for (int i = Curline - 4; i < Curline; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume]->setTag(0);
+		}
+		for (int i = Curline - 4 + sum; i < Curline + sum; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(52, 228, 249));
+			Square[i][Curcolume]->setTag(1);
+		}
+		Curline = Curline + sum;
+		break;
+	case 3:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		Square[Curline - 2][Curcolume]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 2][Curcolume]->setTag(0);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 1][j]->setTag(0);
+		}
+		Square[Curline - 2 + min][Curcolume]->setColor(Color3B(245, 30, 217));
+		Square[Curline - 2 + min][Curcolume]->setTag(1);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1 + min][j]->setColor(Color3B(245, 30, 217));
+			Square[Curline - 1 + min][j]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 4:
+		if (Curline < 3)
+			break;
+		min = 21;
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		sum = 0;
+		for (int i = Curline - 2; i < LINE - 2; i++)
+		{
+			if (Square[i][Curcolume + 1]->getTag() == 1)
+			{
+				sum = i - Curline + 2;
+				break;
+			}
+			if (i == LINE - 3)
+				sum = i - Curline + 3;
+		}
+		if (sum <= min)
+			min = sum;
+		Square[Curline - 3][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 3][Curcolume + 1]->setTag(0);
+		for (int i = Curline - 3; i < Curline; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume]->setTag(0);
+		}
+		Square[Curline - 3 + min][Curcolume + 1]->setColor(Color3B(245, 30, 217));
+		Square[Curline - 3 + min][Curcolume + 1]->setTag(1);
+		for (int i = Curline - 3 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(245, 30, 217));
+			Square[i][Curcolume]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 5:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			sum = 0;
+			for (int i = Curline - 1; i < LINE - 1; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline + 1;
+					break;
+				}
+				if (i == LINE - 2)
+					sum = i - Curline + 2;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume + 2]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 2][j]->setTag(0);
+		}
+		Square[Curline - 1][Curcolume + 2]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 1][Curcolume + 2]->setTag(0);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2 + min][j]->setColor(Color3B(245, 30, 217));
+			Square[Curline - 2 + min][j]->setTag(1);
+		}
+		Square[Curline -1 + min][Curcolume + 2]->setColor(Color3B(245, 30, 217));
+		Square[Curline -1 + min][Curcolume + 2]->setTag(1);
+		Curline = Curline + min;
+		break;
+	case 6:
+		if (Curline < 3)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		for (int i = Curline - 3; i < Curline; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume + 1]->setTag(0);
+		}
+		Square[Curline - 1][Curcolume]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 1][Curcolume]->setTag(0);
+		for (int i = Curline - 3 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(245, 30, 217));
+			Square[i][Curcolume + 1]->setTag(1);
+		}
+		Square[Curline - 1 + min][Curcolume]->setColor(Color3B(245, 30, 217));
+		Square[Curline - 1 + min][Curcolume]->setTag(1);
+		Curline = Curline + min;
+		break;
+	case 7:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		Square[Curline - 2][Curcolume + 2]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 2][Curcolume + 2]->setTag(0);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 1][j]->setTag(0);
+		}
+		Square[Curline - 2 + min][Curcolume + 2]->setColor(Color3B(245, 30, 217));
+		Square[Curline - 2 + min][Curcolume + 2]->setTag(1);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1 + min][j]->setColor(Color3B(245, 30, 217));
+			Square[Curline - 1 + min][j]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 8:
+		if (Curline < 3)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		for (int i = Curline - 3; i < Curline; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume]->setTag(0);
+		}
+		Square[Curline - 1][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 1][Curcolume + 1]->setTag(0);
+		for (int i = Curline - 3 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(245, 30, 217));
+			Square[i][Curcolume]->setTag(1);
+		}
+		Square[Curline - 1 + min][Curcolume + 1]->setColor(Color3B(245, 30, 217));
+		Square[Curline - 1 + min][Curcolume + 1]->setTag(1);
+		Curline = Curline + min;
+		break;
+	case 9:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume + 1; j < Curcolume + 3; j++)
+		{
+			sum = 0;
+			for (int i = Curline - 1; i < LINE - 1; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline + 1;
+					break;
+				}
+				if (i == LINE - 2)
+					sum = i - Curline + 2;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 2][j]->setTag(0);
+		}
+		Square[Curline - 1][Curcolume]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 1][Curcolume]->setTag(0);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2 + min][j]->setColor(Color3B(245, 30, 217));
+			Square[Curline - 2 + min][j]->setTag(1);
+		}
+		Square[Curline - 1 + min][Curcolume]->setColor(Color3B(245, 30, 217));
+		Square[Curline - 1 + min][Curcolume]->setTag(1);
+		Curline = Curline + min;
+		break;
+	case 10:
+		if (Curline < 3)
+			break;
+		min = 21;
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume + 1]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		sum = 0;
+		for (int i = Curline - 2; i < LINE - 2; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline + 2;
+				break;
+			}
+			if (i == LINE - 3)
+				sum = i - Curline + 3;
+		}
+		if (sum <= min)
+			min = sum;
+		Square[Curline - 3][Curcolume]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 3][Curcolume]->setTag(0);
+		for (int i = Curline - 3; i < Curline; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume + 1]->setTag(0);
+		}
+		Square[Curline - 3 + min][Curcolume]->setColor(Color3B(245, 30, 217));
+		Square[Curline - 3 + min][Curcolume]->setTag(1);
+		for (int i = Curline - 3 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(245, 30, 217));
+			Square[i][Curcolume + 1]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 11:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume + 2]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			Square[Curline - 1][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 1][j]->setTag(0);
+		}
+		for (int j = Curcolume + 1; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 2][j]->setTag(0);
+		}
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			Square[Curline - 1 + min][j]->setColor(Color3B(26, 242, 26));
+			Square[Curline - 1 + min][j]->setTag(1);
+		}
+		for (int j = Curcolume + 1; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2 + min][j]->setColor(Color3B(26, 242, 26));
+			Square[Curline - 2 + min][j]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 12:
+		if (Curline < 3)
+			break;
+		min = 21;
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume + 1]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int i = Curline - 3; i < Curline - 1; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume]->setTag(0);
+		}
+		for (int i = Curline - 2; i < Curline; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume + 1]->setTag(0);
+		}
+		for (int i = Curline - 3 + min; i < Curline - 1 + min; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(26, 242, 26));
+			Square[i][Curcolume]->setTag(1);
+		}
+		for (int i = Curline - 2 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(26, 242, 26));
+			Square[i][Curcolume + 1]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 13:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume + 1; j < Curcolume + 3; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			Square[Curline - 2][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 2][j]->setTag(0);
+		}
+		for (int j = Curcolume + 1; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 1][j]->setTag(0);
+		}
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			Square[Curline - 2 + min][j]->setColor(Color3B(26, 242, 26));
+			Square[Curline - 2 + min][j]->setTag(1);
+		}
+		for (int j = Curcolume + 1; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1 + min][j]->setColor(Color3B(26, 242, 26));
+			Square[Curline - 1 + min][j]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 14:
+		if (Curline < 3)
+			break;
+		min = 21; 
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume + 1]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		 sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int i = Curline - 3; i < Curline - 1; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume + 1]->setTag(0);
+		}
+		for (int i = Curline - 2; i < Curline; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume]->setTag(0);
+		}
+		for (int i = Curline - 3 + min; i < Curline - 1 + min; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(26, 242, 26));
+			Square[i][Curcolume + 1]->setTag(1);
+		}
+		for (int i = Curline - 2 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(26, 242, 26));
+			Square[i][Curcolume]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 15:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		Square[Curline - 2][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 2][Curcolume + 1]->setTag(0);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 1][j]->setTag(0);
+		}
+		Square[Curline - 2 + min][Curcolume + 1]->setColor(Color3B(233, 178, 11));
+		Square[Curline - 2 + min][Curcolume + 1]->setTag(1);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 1 + min][j]->setColor(Color3B(233, 178, 11));
+			Square[Curline - 1 + min][j]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 16:
+		if (Curline < 3)
+			break;
+		min = 21;
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume + 1]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int i = Curline - 3; i < Curline; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume]->setTag(0);
+		}
+		Square[Curline - 2][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 2][Curcolume + 1]->setTag(0);
+		for (int i = Curline - 3 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume]->setColor(Color3B(233, 178, 11));
+			Square[i][Curcolume]->setTag(1);
+		}
+		Square[Curline - 2 + min][Curcolume + 1]->setColor(Color3B(233, 178, 11));
+		Square[Curline - 2 + min][Curcolume + 1]->setTag(1);
+		Curline = Curline + min;
+		break;
+	case 17:
+		if (Curline < 2)
+			break;
+		min = 21;
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume + 1]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume + 2]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		Square[Curline - 1][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 1][Curcolume + 1]->setTag(0);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2][j]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 2][j]->setTag(0);
+		}
+		Square[Curline - 1 + min][Curcolume + 1]->setColor(Color3B(233, 178, 11));
+		Square[Curline - 1 + min][Curcolume + 1]->setTag(1);
+		for (int j = Curcolume; j < Curcolume + 3; j++)
+		{
+			Square[Curline - 2 + min][j]->setColor(Color3B(233, 178, 11));
+			Square[Curline - 2 + min][j]->setTag(1);
+		}
+		Curline = Curline + min;
+		break;
+	case 18:
+		if (Curline < 3)
+			break;
+		min = 21;
+		sum = 0;
+		for (int i = Curline; i < LINE; i++)
+		{
+			if (Square[i][Curcolume + 1]->getTag() == 1)
+			{
+				sum = i - Curline;
+				break;
+			}
+			if (i == LINE - 1)
+				sum = i - Curline + 1;
+		}
+		if (sum <= min)
+			min = sum;
+		sum = 0;
+		for (int i = Curline - 1; i < LINE - 1; i++)
+		{
+			if (Square[i][Curcolume]->getTag() == 1)
+			{
+				sum = i - Curline + 1;
+				break;
+			}
+			if (i == LINE - 2)
+				sum = i - Curline + 2;
+		}
+		if (sum <= min)
+			min = sum;
+		for (int i = Curline - 3; i < Curline; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+			Square[i][Curcolume + 1]->setTag(0);
+		}
+		Square[Curline - 2][Curcolume]->setColor(Color3B(255, 255, 255));
+		Square[Curline - 2][Curcolume]->setTag(0);
+		for (int i = Curline - 3 + min; i < Curline + min; i++)
+		{
+			Square[i][Curcolume + 1]->setColor(Color3B(233, 178, 11));
+			Square[i][Curcolume + 1]->setTag(1);
+		}
+		Square[Curline - 2 + min][Curcolume]->setColor(Color3B(233, 178, 11));
+		Square[Curline - 2 + min][Curcolume]->setTag(1);
+		Curline = Curline + min;
+		break;
+	case 19:
+		if (Curline < 2)
+			break;
+		min = 21;
+		for (int j = Curcolume; j < Curcolume + 2; j++)
+		{
+			sum = 0;
+			for (int i = Curline; i < LINE; i++)
+			{
+				if (Square[i][j]->getTag() == 1)
+				{
+					sum = i - Curline;
+					break;
+				}
+				if (i == LINE - 1)
+					sum = i - Curline + 1;
+			}
+			if (sum <= min)
+				min = sum;
+		}
+		for (int i = Curline - 2; i < Curline; i++)
+		{
+			for (int j = Curcolume; j < Curcolume + 2; j++)
+			{
+				Square[i][j]->setColor(Color3B(255, 255, 255));
+				Square[i][j]->setTag(0);
+			}
+		}
+		for (int i = Curline - 2 + min; i < Curline + min; i++)
+		{
+			for (int j = Curcolume; j < Curcolume + 2; j++)
+			{
+				Square[i][j]->setColor(Color3B(244, 69, 46));
+				Square[i][j]->setTag(1);
+			}
+		}
+		Curline = Curline + min;
+		break;
+	}
+}
+
 void gameplay::checkgameover()
 {
 	switch (CurSquareType)
 	{
 	case 1:
 		if (Curline  < 1)
-		{
-			gameover();
-		}
+		gameover();
 		break;
 	case 2:
 		if (Curline  < 4)
-		{
-			gameover();
-		}
+		gameover();
 		break;
 	case 3:
 	case 5:
@@ -185,9 +1088,7 @@ void gameplay::checkgameover()
 	case 17:
 	case 19:
 		if (Curline  < 2)
-		{
-			gameover();
-		}
+		gameover();
 		break;
 	case 4:
 	case 6:
@@ -198,16 +1099,218 @@ void gameplay::checkgameover()
 	case 16:
 	case 18:
 		if (Curline  < 3)
+	    gameover();
+		break;
+	}
+}
+
+void gameplay::nextSquareType()                                    //方块预测的显示
+{
+	nextsquare = rand() % 19 + 1;
+	switch (nextsquare)
+	{
+	case 1:
+		for (int j = 0; j < 4; j++)
 		{
-			gameover();
+			square[1][j]->setColor(Color3B(52, 228, 249));
+			square[1][j]->setTag(1);
+		}
+		break;
+	case 2:
+		for (int i = 0; i < 4; i++)
+		{
+			square[i][1]->setColor(Color3B(52, 228, 249));
+			square[i][1]->setTag(1);
+		}
+		break;
+	case 3:
+		square[1][0]->setColor(Color3B(245, 30, 217));
+		square[1][0]->setTag(1);
+		for (int j = 0; j < 3; j++)
+		{
+			square[2][j]->setColor(Color3B(245, 30, 217));
+			square[2][j]->setTag(1);
+		}
+		break;
+	case 4:
+		square[0][2]->setColor(Color3B(245, 30, 217));
+		square[0][2]->setTag(1);
+		for (int i = 0; i < 3; i++)
+		{
+			square[i][1]->setColor(Color3B(245, 30, 217));
+			square[i][1]->setTag(1);
+		}
+		break;
+	case 5:
+		square[2][2]->setColor(Color3B(245, 30, 217));
+		square[2][2]->setTag(1);
+		for (int j = 0; j < 3; j++)
+		{
+			square[1][j]->setColor(Color3B(245, 30, 217));
+			square[1][j]->setTag(1);
+		}
+		break;
+	case 6:
+		square[2][1]->setColor(Color3B(245, 30, 217));
+		square[2][1]->setTag(1);
+		for (int i = 0; i < 3; i++)
+		{
+			square[i][2]->setColor(Color3B(245, 30, 217));
+			square[i][2]->setTag(1);
+		}
+		break;
+	case 7:
+		square[1][2]->setColor(Color3B(245, 30, 217));
+		square[1][2]->setTag(1);
+		for (int j = 0; j < 3; j++)
+		{
+			square[2][j]->setColor(Color3B(245, 30, 217));
+			square[2][j]->setTag(1);
+		}
+		break;
+	case 8:
+		square[2][2]->setColor(Color3B(245, 30, 217));
+		square[2][2]->setTag(1);
+		for (int i = 0; i < 3; i++)
+		{
+			square[i][1]->setColor(Color3B(245, 30, 217));
+			square[i][1]->setTag(1);
+		}
+		break;
+	case 9:
+		square[2][0]->setColor(Color3B(245, 30, 217));
+		square[2][0]->setTag(1);
+		for (int j = 0; j < 3; j++)
+		{
+			square[1][j]->setColor(Color3B(245, 30, 217));
+			square[1][j]->setTag(1);
+		}
+		break;
+	case 10:
+		square[0][1]->setColor(Color3B(245, 30, 217));
+		square[0][1]->setTag(1);
+		for (int i = 0; i < 3; i++)
+		{
+			square[i][2]->setColor(Color3B(245, 30, 217));
+			square[i][2]->setTag(1);
+		}
+		break;
+	case 11:
+		for (int j = 0; j < 2; j++)
+		{
+			square[2][j]->setColor(Color3B(26, 242, 26));
+			square[2][j]->setTag(1);
+		}
+		for (int j = 1; j < 3; j++)
+		{
+			square[1][j]->setColor(Color3B(26, 242, 26));
+			square[1][j]->setTag(1);
+		}
+		break;
+	case 12:
+		for (int i = 0; i < 2; i++)
+		{
+			square[i][1]->setColor(Color3B(26, 242, 26));
+			square[i][1]->setTag(1);
+		}
+		for (int i = 1; i < 3; i++)
+		{
+			square[i][2]->setColor(Color3B(26, 242, 26));
+			square[i][2]->setTag(1);
+		}
+		break;
+	case 13:
+		for (int j = 0; j < 2; j++)
+		{
+			square[1][j]->setColor(Color3B(26, 242, 26));
+			square[1][j]->setTag(1);
+		}
+		for (int j = 1; j < 3; j++)
+		{
+			square[2][j]->setColor(Color3B(26, 242, 26));
+			square[2][j]->setTag(1);
+		}
+		break;
+	case 14:
+		for (int i = 0; i < 2; i++)
+		{
+			square[i][2]->setColor(Color3B(26, 242, 26));
+			square[i][2]->setTag(1);
+		}
+		for (int i = 1; i < 3; i++)
+		{
+			square[i][1]->setColor(Color3B(26, 242, 26));
+			square[i][1]->setTag(1);
+		}
+		break;
+	case 15:
+		square[1][1]->setColor(Color3B(233, 178, 11));
+		square[1][1]->setTag(1);
+		for (int j = 0; j < 3; j++)
+		{
+			square[2][j]->setColor(Color3B(233, 178, 11));
+			square[2][j]->setTag(1);
+		}
+		break;
+	case 16:
+		square[1][2]->setColor(Color3B(233, 178, 11));
+		square[1][2]->setTag(1);
+		for (int i = 0; i < 3; i++)
+		{
+			square[i][1]->setColor(Color3B(233, 178, 11));
+			square[i][1]->setTag(1);
+		}
+		break;
+	case 17:
+		square[2][1]->setColor(Color3B(233, 178, 11));
+		square[2][1]->setTag(1);
+		for (int j = 0; j < 3; j++)
+		{
+			square[1][j]->setColor(Color3B(233, 178, 11));
+			square[1][j]->setTag(1);
+		}
+		break;
+	case 18:
+		square[1][1]->setColor(Color3B(233, 178, 11));
+		square[1][1]->setTag(1);
+		for (int i = 0; i < 3; i++)
+		{
+			square[i][2]->setColor(Color3B(233, 178, 11));
+			square[i][2]->setTag(1);
+		}
+		break;
+	case 19:
+		for (int i = 1; i < 3; i++)
+		{
+			for (int j = 1; j < 3; j++)
+			{
+				square[i][j]->setColor(Color3B(244, 69, 46));
+				square[i][j]->setTag(1);
+			}
 		}
 		break;
 	}
 }
 
+void gameplay::clearSquare()
+{
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			square[i][j]->setColor(Color3B(255, 255, 255));
+			square[i][j]->setTag(0);
+		}
+	}
+}
+
+
 void gameplay::newSquareType()
 {
-	CurSquareType = rand() % 19 + 1;                                     //从19种形状中随机产生一种
+	
+	clearSquare();                       //清除方块预测栏中的图形
+	CurSquareType = nextsquare;
+	nextSquareType();                   //预测下一个出现的图形
 	switch (CurSquareType)
 	{
 	case 1:
@@ -238,13 +1341,13 @@ void gameplay::newSquareType()
 	}
 }
 
-void gameplay::nextSquareType()
+void gameplay::changeSquareType()
 {
 	switch (CurSquareType)
 	{
 	case 1:
 		//判断是否可以变换
-		if (Curline + 1 > LINE - 1)
+		if (Curline + 1 > LINE - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -276,13 +1379,13 @@ void gameplay::nextSquareType()
 		break;
 	case 2:
 		//判断是否可以变换
-		if (Curcolume - 1 < 0 || Curcolume + 2 > COLUME - 1)
+		if (Curcolume - 1 < 0 || Curcolume + 2 > COLUME - 1 || Curline < 2)
 		{
 			return;
 		}
 		for (int i = 0; i < 4; i++)
 		{
-			if (i != 1 && Curline - 2 > -1 && Square[Curline - 2][Curcolume - 1 + i]->getTag() == 1)
+			if (i != 1 && Curline - 2 > 0 && Square[Curline - 3][Curcolume - 1 + i]->getTag() == 1)
 			{
 				return;
 			}
@@ -290,25 +1393,25 @@ void gameplay::nextSquareType()
 
 		for (int i = 0; i < 4; i++)
 		{
-			if (i != 2 && Curline - 4 + i > -1)
+			if (i != 1 && Curline - 4 + i > -1)
 			{
 				Square[Curline - 4 + i][Curcolume]->setColor(Color3B(255, 255, 255));
 				Square[Curline - 4 + i][Curcolume]->setTag(0);
 			}
-			if (i != 1 && Curline - 2 > -1)
+			if (i != 1 && Curline - 2 > 0)
 			{
-				Square[Curline - 2][Curcolume - 1 + i]->setColor(Color3B(52, 228, 249));
-				Square[Curline - 2][Curcolume - 1 + i]->setTag(1);
+				Square[Curline - 3][Curcolume - 1 + i]->setColor(Color3B(52, 228, 249));
+				Square[Curline - 3][Curcolume - 1 + i]->setTag(1);
 			}
 		}
 
-		Curline--;
+		Curline = Curline - 2;
 		Curcolume--;
 		CurSquareType = 1;
 		break;
 	case 3:
 		//判断是否可以变换
-		if (Curline > LINE - 1)
+		if (Curline > LINE - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -354,7 +1457,7 @@ void gameplay::nextSquareType()
 		break;
 	case 4:
 		//判断是否可以变换
-		if (Curcolume - 1 < 0)
+		if (Curcolume - 1 < 0 || Curline == 0)
 		{
 			return;
 		}
@@ -413,7 +1516,10 @@ void gameplay::nextSquareType()
 		{
 			return;
 		}
-
+		if (Curline == 0)
+		{
+			return;
+		}
 		for (int i = 0; i < 2; i++)
 		{
 			if (Curline - 2 + i > -1)
@@ -445,7 +1551,7 @@ void gameplay::nextSquareType()
 		break;
 	case 6:
 		//判断是否可以变换
-		if (Curcolume + 2 > COLUME - 1)
+		if (Curcolume + 2 > COLUME - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -493,7 +1599,7 @@ void gameplay::nextSquareType()
 		break;
 	case 7:
 		//判断是否可以变换
-		if (Curline > LINE - 1)
+		if (Curline > LINE - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -539,7 +1645,7 @@ void gameplay::nextSquareType()
 		break;
 	case 8:
 		//判断是否可以变换
-		if (Curcolume - 1 < 0)
+		if (Curcolume - 1 < 0 || Curline == 0)
 		{
 			return;
 		}
@@ -598,7 +1704,10 @@ void gameplay::nextSquareType()
 		{
 			return;
 		}
-
+		if (Curline == 0)
+		{
+			return;
+		}
 		for (int i = 0; i < 2; i++)
 		{
 			if (Curline - 2 + i > -1)
@@ -630,7 +1739,7 @@ void gameplay::nextSquareType()
 		break;
 	case 10:
 		//判断是否可以变换
-		if (Curcolume + 2 > COLUME - 1)
+		if (Curcolume + 2 > COLUME - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -678,7 +1787,7 @@ void gameplay::nextSquareType()
 		break;
 	case 11:
 		//判断是否可以变换
-		if (Curline > LINE - 1)
+		if (Curline > LINE - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -715,43 +1824,35 @@ void gameplay::nextSquareType()
 		break;
 	case 12:
 		//判断是否可以变换
-		if (Curcolume - 1 < 0)
+		if (Curcolume - 1 < 0 || Curline < 3)
 		{
 			return;
 		}
-		for (int i = 0; i < 2; i++)
+		if (Curline > 2 && Square[Curline - 3][Curcolume + 1]->getTag() == 1)
 		{
-			if (Curline - 1 > -1 && Square[Curline - 1][Curcolume - 1 + i]->getTag() == 1)
-			{
-				return;
-			}
+			return;
+		}
+		if (Curline > 1 && Square[Curline - 2][Curcolume - 1]->getTag() == 1)
+		{
+			return;
 		}
 
-		if (Curline - 3 > -1)
+		for (int i =0; i < 2; i++)
 		{
-			Square[Curline - 3][Curcolume]->setColor(Color3B(255, 255, 255));
-			Square[Curline - 3][Curcolume]->setTag(0);
+			Square[Curline - 2 + i][Curcolume + 1]->setColor(Color3B(255, 255, 255));
+			Square[Curline - 2 + i][Curcolume + 1]->setTag(0);
 		}
-		if (Curline - 1 > -1)
-		{
-			Square[Curline - 1][Curcolume + 1]->setColor(Color3B(255, 255, 255));
-			Square[Curline - 1][Curcolume + 1]->setTag(0);
-		}
-		for (int i = 0; i < 2; i++)
-		{
-			if (Curline - 1 > -1)
-			{
-				Square[Curline - 1][Curcolume - 1 + i]->setColor(Color3B(26, 242, 26));
-				Square[Curline - 1][Curcolume - 1 + i]->setTag(1);
-			}
-		}
-
+		Square[Curline - 2][Curcolume - 1]->setColor(Color3B(26, 242, 26));
+		Square[Curline - 2][Curcolume - 1]->setTag(1);
+		Square[Curline - 3][Curcolume + 1]->setColor(Color3B(26, 242, 26));
+		Square[Curline - 3][Curcolume + 1]->setTag(1);
+		Curline--;
 		Curcolume--;
 		CurSquareType = 11;
 		break;
 	case 13:
 		//判断是否可以变换
-		if (Curline > LINE - 1)
+		if (Curline > LINE - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -786,7 +1887,7 @@ void gameplay::nextSquareType()
 		break;
 	case 14:
 		//判断是否可以变换
-		if (Curcolume - 1 < 0)
+		if (Curcolume - 1 < 0 || Curline == 0)
 		{
 			return;
 		}
@@ -823,7 +1924,7 @@ void gameplay::nextSquareType()
 		break;
 	case 15:
 		//判断是否可以变换
-		if (Curline > LINE - 1)
+		if (Curline > LINE - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -846,7 +1947,7 @@ void gameplay::nextSquareType()
 		break;
 	case 16:
 		//判断是否可以变换
-		if (Curcolume - 1 < 0)
+		if (Curcolume - 1 < 0 || Curline == 0)
 		{
 			return;
 		}
@@ -875,7 +1976,10 @@ void gameplay::nextSquareType()
 		{
 			return;
 		}
-
+		if (Curline == 0)
+		{
+			return;
+		}
 		if (Curline - 2 > -1)
 		{
 			Square[Curline - 2][Curcolume + 2]->setColor(Color3B(255, 255, 255));
@@ -891,7 +1995,7 @@ void gameplay::nextSquareType()
 		break;
 	case 18:
 		//判断是否可以变换
-		if (Curcolume + 2 > COLUME - 1)
+		if (Curcolume + 2 > COLUME - 1 || Curline == 0)
 		{
 			return;
 		}
@@ -948,6 +2052,7 @@ void gameplay::clearLine(int nLineStart, int nLineEnd)
 				Square[0][x]->setTag(0);
 			}
 			CurScore=CurScore+50;
+			SimpleAudioEngine::getInstance()->playEffect("getscore.mp3");
 		}
 	}
 	updateScore();
@@ -976,7 +2081,7 @@ void gameplay::updateDown(float dt)
 		}
 		for (int i = 0; i < 4; i++)
 		{
-			if (Square[Curline][Curcolume + i]->getTag() == 1)
+			if (Square[Curline][Curcolume + i]->getTag() == 1)               //将有颜色的方块标记为1
 			{
 				clearLine(Curline - 1, Curline - 1);
 				newSquareType();
@@ -2847,8 +3952,24 @@ void gameplay::updateRight()
 		break;
 	}
 }
-void gameplay::menuItemCallback(Ref* pSender)               
+
+void gameplay::menuItemCallback(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("click.mp3");
+	Director::getInstance()->resume();
 	Director::getInstance()->replaceScene(HelloWorld::createScene());
-	
 }
+void gameplay::menuMusicCallback(cocos2d::Ref* pSender)
+{
+	if (isPause == false)
+	{
+		SimpleAudioEngine::sharedEngine()->pauseBackgroundMusic();
+		isPause = true;
+	}
+	else
+	{
+		SimpleAudioEngine::sharedEngine()->resumeBackgroundMusic();
+		isPause = false;
+	}
+}
+

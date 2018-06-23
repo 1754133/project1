@@ -4,4 +4,5 @@
 #include <iostream>
 extern float speed ;
 extern int CurScore;
+extern bool isPause;
 #endif

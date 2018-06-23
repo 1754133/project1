@@ -1,6 +1,7 @@
 #include "ChartsScene.h"
 #include "HelloWorldScene.h"
 #include "UserData.h"
+#include "gameplay.h"
 USING_NS_CC;
 ChartsScene::ChartsScene() :
 	_newScoreTitle(nullptr),
@@ -25,7 +26,7 @@ bool ChartsScene::init()
 	Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
 	auto background = Sprite::create("timg.jpg");
-	background->setPosition(Vec2(visibleSize.width / 2 + origin.x+140, visibleSize.height / 2 + origin.y));
+	background->setPosition(Vec2(visibleSize.width / 2 + origin.x+140, visibleSize.height / 2 + origin.y));  //Ìí¼Ó±³¾°
 	this->addChild(background, -1);
 
 	auto label = Label::create("return", "fonts/airstrikeacad.ttf", 30);                    //·µ»Ø                  
@@ -94,6 +95,7 @@ Scene*ChartsScene::createScene()
 }
 void ChartsScene::enterHelloWorldScene(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("return.mp3");
 	Director::getInstance()->replaceScene(HelloWorld::createScene());
 
 }

@@ -107,6 +107,7 @@ void help::KeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
 
 void help::enterHelloWorldScene(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("return.mp3");
 	Director::getInstance()->replaceScene(HelloWorld::createScene());
 
 }

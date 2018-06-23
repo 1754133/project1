@@ -1,6 +1,7 @@
 #include "HelloWorldScene.h"
 #include "SimpleAudioEngine.h"
 #include <vector>
+#include "canshu.h"
 using namespace std;
 USING_NS_CC;
 
@@ -66,6 +67,7 @@ bool HelloWorld::init()
 	background->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y));
 	this->addChild(background, -1);
 
+	SimpleAudioEngine::getInstance()->preloadBackgroundMusic("bgmusic.mp3");
 	
 	MenuItemImage* item1 = MenuItemImage::create("playButton.png","playButton2.png", CC_CALLBACK_1(HelloWorld::menuItem1Callback, this));
 	MenuItemImage* item2 = MenuItemImage::create("helpButton.png","helpButton2.png", CC_CALLBACK_1(HelloWorld::menuItem2Callback, this));
@@ -80,6 +82,7 @@ bool HelloWorld::init()
 	if (SimpleAudioEngine::sharedEngine()->isBackgroundMusicPlaying())
 	{
 		SimpleAudioEngine::getInstance()->stopBackgroundMusic("bgmusic.mp3");
+		isPause = true;
 	}
 
     return true;
@@ -87,19 +90,24 @@ bool HelloWorld::init()
 
 void HelloWorld::menuItem1Callback(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("click.mp3");
 	Director::getInstance()->replaceScene(gameplay::createScene());
 	SimpleAudioEngine::getInstance()->playBackgroundMusic("bgmusic.mp3", true);
+	isPause = false;
 }
 void HelloWorld::menuItem2Callback(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("click.mp3");
 	Director::getInstance()->replaceScene(help::createScene());
 }
 void HelloWorld::menuItem3Callback(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("click.mp3");
 	Director::getInstance()->replaceScene(SET::createScene());
 }
 void HelloWorld::menuItem4Callback(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("click.mp3");
 	Director::getInstance()->replaceScene(ChartsScene::createScene());
 }
 void HelloWorld::menuCloseCallback(Ref* pSender)

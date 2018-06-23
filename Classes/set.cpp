@@ -56,6 +56,7 @@ bool SET::init()
 
 void SET::enterHelloWorldScene(Ref* pSender)
 {
+	SimpleAudioEngine::getInstance()->playEffect("return.mp3");
 	Director::getInstance()->replaceScene(HelloWorld::createScene());
 
 }
@@ -64,7 +65,8 @@ void SET::enterHelloWorldScene(Ref* pSender)
 void SET::menuItem1Callback(Ref* pSender)
 {
 	if (dif == 0) {
-		speed = 1.0;
+		SimpleAudioEngine::getInstance()->playEffect("choose.mp3");
+		speed = 0.4;
 		Sprite * sprite = Sprite::create("pointer.png");
 		sprite->setPosition(ccp(635, 390));
 		this->addChild(sprite);
@@ -75,7 +77,8 @@ void SET::menuItem1Callback(Ref* pSender)
 void SET::menuItem2Callback(Ref* pSender)
 {
 	if (dif == 0) {
-		speed = 0.5;
+		SimpleAudioEngine::getInstance()->playEffect("choose.mp3");
+		speed = 0.2;
 		Sprite * sprite = Sprite::create("pointer.png");
 		sprite->setPosition(ccp(635, 350));
 		this->addChild(sprite);
@@ -85,7 +88,8 @@ void SET::menuItem2Callback(Ref* pSender)
 void SET::menuItem3Callback(Ref* pSender)
 {
 	if (dif == 0) {
-		speed = 0.3;
+		SimpleAudioEngine::getInstance()->playEffect("choose.mp3");
+		speed = 0.09;
 		Sprite * sprite = Sprite::create("pointer.png");
 		sprite->setPosition(ccp(635, 300));
 		this->addChild(sprite);

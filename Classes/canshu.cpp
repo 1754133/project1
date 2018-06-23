@@ -1,3 +1,4 @@
 #include "canshu.h"
-float speed = 1.0;
+float speed = 0.4;
 int CurScore = 0;
+bool isPause = false;
