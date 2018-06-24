@@ -112,8 +112,21 @@ bool gameplay::init()
 	menu->setPosition(Point::ZERO);
 	this->addChild(menu);
 
-	auto label1 = Label::create("Next:", "fonts/airstrikeacad.ttf", 20);
+	auto pause = MenuItemImage::create("pause.png", "pause.png");
+	auto play = MenuItemImage::create("play.png", "play.png");
+	auto toggleItem1 = MenuItemToggle::createWithCallback(CC_CALLBACK_1(gameplay::menuStartCallback, this), pause, play, NULL);
+	toggleItem1->setPosition(Vec2(940, 550));
+	auto menu1 = Menu::create(toggleItem1, NULL);
+	menu1->setPosition(Point::ZERO);
+	this->addChild(menu1);
+
+	auto next = Sprite::create("next.png");
+	next->setPosition(Vec2(470, 600));
+	this->addChild(next, -1);
+
+	auto label1 = Label::create("Next:", "fonts/Marker Felt.ttf", 40);
 	label1->setPosition(Vec2(470, 600));
+	label1->setColor(Color3B(148, 0, 211));
 	this->addChild(label1);
 
 	auto keyboardListener = EventListenerKeyboard::create();
@@ -3926,3 +3939,16 @@ void gameplay::menuMusicCallback(cocos2d::Ref* pSender)
 	}
 }
 
+void gameplay::menuStartCallback(cocos2d::Ref* pSender)
+{
+	if (ispause == false)
+	{
+		Director::getInstance()->pause();
+		ispause = true;
+	}
+	else
+	{
+		Director::getInstance()->resume();
+		ispause = false;
+	}
+}

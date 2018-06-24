@@ -15,6 +15,7 @@ public:
 
 	virtual bool init();
 	void enterHelloWorldScene(Ref* pSender);
+	void entergameplayScene(Ref* pSender);
 	// a selector callback
 	// implement the "static create()" method manually
 	CREATE_FUNC(gameover);

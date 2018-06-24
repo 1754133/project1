@@ -15,8 +15,9 @@ public:
 	static cocos2d::Scene* createScene();
 	void menuItemCallback(cocos2d::Ref* pSender);
 	void menuMusicCallback(cocos2d::Ref* pSender);
+	void menuStartCallback(cocos2d::Ref* pSender);
 	virtual bool init();
-	bool isKeyPressed(EventKeyboard::KeyCode keyCode);
+	bool isKeyPressed(EventKeyboard::KeyCode keyCode);                   //处理键盘按住
 	// a selector callback
 	void enterHelloWorldScene(Ref* pSender);
 	// implement the "static create()" method manually
