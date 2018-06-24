@@ -58,10 +58,6 @@ bool HelloWorld::init()
 	
 
     // add "HelloWorld" splash screen"
-	
-	
-	/*auto moveby = MoveBy::create(2, Vec2(200, 300));
-	sprite1->runAction(moveby)*/;
 
 	auto background = Sprite::create("timg.jpg");
 	background->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y));

@@ -95,4 +95,5 @@ Scene*ChartsScene::createScene()
 void ChartsScene::enterHelloWorldScene(Ref* pSender)
 {
 	Director::getInstance()->replaceScene(HelloWorld::createScene());
+	SimpleAudioEngine::getInstance()->playEffect("return.mp3");
 }

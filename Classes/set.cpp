@@ -55,7 +55,7 @@ bool SET::init()
 void SET::enterHelloWorldScene(Ref* pSender)
 {
 	Director::getInstance()->replaceScene(HelloWorld::createScene());
-
+	SimpleAudioEngine::getInstance()->playEffect("return.mp3");
 }
 
 
@@ -65,6 +65,7 @@ void SET::menuItem1Callback(Ref* pSender)
 		basicScore = 50;
 		auto moveTo = MoveTo::create(0, Vec2(635, 380));
 		sprite1->runAction(moveTo);
+		SimpleAudioEngine::getInstance()->playEffect("choose.mp3");
 }
 void SET::menuItem2Callback(Ref* pSender)
 {
@@ -72,6 +73,7 @@ void SET::menuItem2Callback(Ref* pSender)
 		basicScore = 100;
 		auto moveTo = MoveTo::create(0, Vec2(635, 340));
 		sprite1->runAction(moveTo);
+		SimpleAudioEngine::getInstance()->playEffect("choose.mp3");
 }
 void SET::menuItem3Callback(Ref* pSender)
 {
@@ -79,6 +81,7 @@ void SET::menuItem3Callback(Ref* pSender)
 		basicScore = 200;
 		auto moveTo = MoveTo::create(0, Vec2(635, 300));
 		sprite1->runAction(moveTo);
+		SimpleAudioEngine::getInstance()->playEffect("choose.mp3");
 }
 
 
